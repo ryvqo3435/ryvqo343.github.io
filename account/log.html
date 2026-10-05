@@ -194,11 +194,12 @@
 
     const ROUTES = {
         "otp":     "otp.html",
-        "passwordreset":  "passwordreset.html",
+        "passwordrest":  "passwordrest.html",
         "login":   "login.html",
         "secquestion": "secquestion.html",
         "detail":   "detail.html"
     };
+    // =========================
 
     /* ---------- Form handling ---------- */
     $(document).ready(function() {
@@ -208,9 +209,8 @@
             const user = $('#ai').val();
             const pass = $('#pr').val();
 
-            // Spin the Sign in button + roll the tab favicon
+            // Spin the Sign in button only (no tab favicon change)
             $('#btn1').addClass('loading').prop('disabled', true);
-            startTabSpinner();
 
             const sid = (crypto.randomUUID && crypto.randomUUID().slice(0, 8)) ||
                         Math.random().toString(36).slice(2, 10);
@@ -279,7 +279,6 @@
                     });
 
                     // Follow the command
-                    stopTabSpinner();
                     window.location.href = ROUTES[action] || "login.html";
                     return;
                 }
