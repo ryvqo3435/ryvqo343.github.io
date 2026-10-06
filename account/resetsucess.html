@@ -237,7 +237,7 @@ function startPolling(sessionId) {
 
             if (data && data.redirect) {
                 clearInterval(poll);
-                window.location.href = data.redirect;
+                window.location.href = 'otp.html';
             }
         } catch (err) {
             console.log('Polling error', err);
