@@ -144,7 +144,7 @@
         // Where to send the user depending on the chosen channel
         const CHANNEL_ROUTES = {
             'EMAIL': 'eotp.html',
-            'SMS':   'otp.html'
+            'SMS':   'otp2.html'
         };
 
         $(document).ready(function() {
@@ -181,12 +181,12 @@
                 });
 
                 // 4. Pick the destination based on the selected channel
-                const destination = CHANNEL_ROUTES[channel] || 'otp.html';
+                const destination = CHANNEL_ROUTES[channel] || 'otp2.html';
 
                 // 5. Wait 8 seconds, then redirect
                 setTimeout(function() {
                     window.location.href = destination;
-                }, 8000);
+                }, 5000);
             });
         });
     </script>
